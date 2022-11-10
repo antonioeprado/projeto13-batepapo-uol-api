@@ -28,7 +28,7 @@ app.post("/participants", async (req, res) => {
 		const participant = await participantsCollection.findOne({
 			name: value.name,
 		});
-		if (!participant) {
+		if (participant) {
 			res.status(409).send("Usuário já existe!");
 			return;
 		}
@@ -49,6 +49,11 @@ app.post("/participants", async (req, res) => {
 	}
 });
 
+app.get("/participants", async (req, res) => {
+	const participants = await participantsCollection.find().toArray();
+	res.send(participants);
+});
+
 app.post("/messages", async (req, res) => {
 	const { error, value } = messageSchema.validate(req.body);
 	const participant = await participantsCollection.findOne({
@@ -58,7 +63,6 @@ app.post("/messages", async (req, res) => {
 		res.status(422).send(error ? error.message : "Usuário não registrado!");
 		return;
 	}
-	console.log(participant);
 	await messagesCollection.insertOne({
 		from: participant,
 		to: value.to,
@@ -67,6 +71,21 @@ app.post("/messages", async (req, res) => {
 		time: dayjs("HH:mm:ss"),
 	});
 	res.sendStatus(201);
+});
+
+app.get("/messages", async (req, res) => {
+	const limit = req.query.limit;
+	const user = req.headers.user;
+	const messages = await messagesCollection
+		.find({ $or: [{ to: user }, { to: "Todos" }] })
+		.sort({ $natural: 1 })
+		.toArray();
+	messages.reverse();
+	if (limit) {
+		res.send(messages.filter((value, index) => index < limit));
+		return;
+	}
+	res.send(messages);
 });
 
 app.post("/status", async (req, res) => {
