@@ -25,10 +25,10 @@ app.post("/participants", async (req, res) => {
 		return;
 	}
 	try {
-		const participant = await participantsCollection
-			.find({ name: value.name })
-			.toArray();
-		if (participant.length !== 0) {
+		const participant = await participantsCollection.findOne({
+			name: value.name,
+		});
+		if (!participant) {
 			res.status(409).send("Usuário já existe!");
 			return;
 		}
@@ -51,13 +51,14 @@ app.post("/participants", async (req, res) => {
 
 app.post("/messages", async (req, res) => {
 	const { error, value } = messageSchema.validate(req.body);
-	const participant = await participantsCollection
-		.find({ name: req.headers.user })
-		.toArray();
-	if (error || participant.length === 0) {
+	const participant = await participantsCollection.findOne({
+		name: req.headers.user,
+	});
+	if (error || !participant) {
 		res.status(422).send(error ? error.message : "Usuário não registrado!");
 		return;
 	}
+	console.log(participant);
 	await messagesCollection.insertOne({
 		from: participant,
 		to: value.to,
@@ -66,6 +67,20 @@ app.post("/messages", async (req, res) => {
 		time: dayjs("HH:mm:ss"),
 	});
 	res.sendStatus(201);
+});
+
+app.post("/status", async (req, res) => {
+	const participant = await participantsCollection.findOne({
+		name: req.headers.user,
+	});
+	if (!participant) {
+		res.sendStatus(404);
+		return;
+	}
+	await participantsCollection.updateOne(participant, {
+		$set: { lastStatus: Date.now() },
+	});
+	res.sendStatus(200);
 });
 
 app.listen(5000, () => {
