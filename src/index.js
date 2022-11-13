@@ -41,7 +41,7 @@ app.post("/participants", async (req, res) => {
 			to: "Todos",
 			text: "entra na sala...",
 			type: "status",
-			time: dayjs("HH:mm:ss"),
+			time: dayjs().format("HH:mm:ss"),
 		});
 		res.sendStatus(201);
 	} catch (error) {
@@ -68,7 +68,7 @@ app.post("/messages", async (req, res) => {
 		to: value.to,
 		text: value.text,
 		type: value.type,
-		time: dayjs("HH:mm:ss"),
+		time: dayjs().format("HH:mm:ss"),
 	});
 	res.sendStatus(201);
 });
@@ -101,6 +101,12 @@ app.post("/status", async (req, res) => {
 	});
 	res.sendStatus(200);
 });
+
+setInterval(async () => {
+	await participantsCollection.deleteMany({
+		$expr: { lastStatus: { $gt: ["$$NOW" - "$lastStatus", 10] } },
+	});
+}, 15000);
 
 app.listen(5000, () => {
 	console.log("Server running on port: 5000");
