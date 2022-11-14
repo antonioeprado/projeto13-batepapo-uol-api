@@ -76,7 +76,7 @@ app.post("/messages", async (req, res) => {
 			return;
 		}
 		await messagesCollection.insertOne({
-			from: participant,
+			from: participant.name,
 			to: value.to,
 			text: value.text,
 			type: value.type,
@@ -96,7 +96,6 @@ app.get("/messages", async (req, res) => {
 			.find({ $or: [{ to: user }, { to: "Todos" }] })
 			.sort({ $natural: 1 })
 			.toArray();
-		messages.reverse();
 		if (limit) {
 			res.send(messages.filter((value, index) => index < limit));
 			return;
@@ -142,6 +141,49 @@ app.delete("/messages/:id", async (req, res) => {
 		}
 		await messagesCollection.deleteOne({ _id: ObjectId(messageID) });
 		res.sendStatus(200);
+	} catch (error) {
+		console.log(error);
+	}
+});
+
+app.put("/messages/:id", async (req, res) => {
+	const sanitizedObjMessage = {
+		to: stripHtml(req.body.to).result.trim(),
+		text: stripHtml(req.body.text).result.trim(),
+		type: stripHtml(req.body.type).result.trim(),
+	};
+	const messageID = req.params.id;
+	try {
+		const { error, value } = messageSchema.validate(sanitizedObjMessage);
+		console.log(value);
+		const messageSender = await participantsCollection.findOne({
+			name: stripHtml(req.headers.user).result.trim(),
+		});
+		const messageToUpdate = await messagesCollection.findOne({
+			_id: ObjectId(messageID),
+		});
+		if (error || !messageSender) {
+			res.status(422).send(error ? error.message : "Usuário não registrado!");
+			return;
+		}
+		if (!messageToUpdate) {
+			res.sendStatus(404);
+			return;
+		}
+		if (messageToUpdate.from !== messageSender.name) {
+			res.sendStatus(401);
+			return;
+		}
+		await messagesCollection.updateOne(messageToUpdate, {
+			$set: {
+				from: messageSender.name,
+				to: value.to,
+				text: value.text,
+				type: value.type,
+				time: dayjs().format("HH:mm:ss"),
+			},
+		});
+		res.sendStatus(201);
 	} catch (error) {
 		console.log(error);
 	}
