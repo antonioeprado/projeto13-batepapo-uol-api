@@ -103,8 +103,11 @@ app.post("/status", async (req, res) => {
 });
 
 setInterval(async () => {
+	const timeNow = Date.now();
 	await participantsCollection.deleteMany({
-		$expr: { lastStatus: { $gt: ["$$NOW" - "$lastStatus", 10] } },
+		$expr: {
+			$gt: [{ $subtract: [timeNow, "$lastStatus"] }, 10000],
+		},
 	});
 }, 15000);
 
