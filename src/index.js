@@ -1,5 +1,5 @@
 import express from "express";
-import { MongoClient } from "mongodb";
+import { MongoClient, ObjectId } from "mongodb";
 import cors from "cors";
 import dotenv from "dotenv";
 import dayjs from "dayjs";
@@ -125,6 +125,28 @@ app.post("/status", async (req, res) => {
 	}
 });
 
+app.delete("/messages/:id", async (req, res) => {
+	const user = req.headers.user;
+	const messageID = req.params.id;
+	try {
+		const messageToDelete = await messagesCollection.findOne({
+			_id: ObjectId(messageID),
+		});
+		if (!messageToDelete) {
+			res.sendStatus(404);
+			return;
+		}
+		if (messageToDelete.from !== user) {
+			res.send(401);
+			return;
+		}
+		await messagesCollection.deleteOne({ _id: ObjectId(messageID) });
+		res.sendStatus(200);
+	} catch (error) {
+		console.log(error);
+	}
+});
+
 setInterval(async () => {
 	try {
 		const timeNow = Date.now();
@@ -141,7 +163,7 @@ setInterval(async () => {
 				to: "Todos",
 				text: "sai da sala...",
 				type: "status",
-				time: dayjs(timeNow),
+				time: dayjs(timeNow).format("HH:mm:ss"),
 			});
 			await participantsCollection.deleteOne(participant);
 		});
