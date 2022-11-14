@@ -50,77 +50,97 @@ app.post("/participants", async (req, res) => {
 });
 
 app.get("/participants", async (req, res) => {
-	const participants = await participantsCollection.find().toArray();
-	res.send(participants);
+	try {
+		const participants = await participantsCollection.find().toArray();
+		res.send(participants);
+	} catch (error) {
+		console.log(error);
+	}
 });
 
 app.post("/messages", async (req, res) => {
-	const { error, value } = messageSchema.validate(req.body);
-	const participant = await participantsCollection.findOne({
-		name: req.headers.user,
-	});
-	if (error || !participant) {
-		res.status(422).send(error ? error.message : "Usuário não registrado!");
-		return;
+	try {
+		const { error, value } = messageSchema.validate(req.body);
+		const participant = await participantsCollection.findOne({
+			name: req.headers.user,
+		});
+		if (error || !participant) {
+			res.status(422).send(error ? error.message : "Usuário não registrado!");
+			return;
+		}
+		await messagesCollection.insertOne({
+			from: participant,
+			to: value.to,
+			text: value.text,
+			type: value.type,
+			time: dayjs().format("HH:mm:ss"),
+		});
+		res.sendStatus(201);
+	} catch (error) {
+		console.log(error);
 	}
-	await messagesCollection.insertOne({
-		from: participant,
-		to: value.to,
-		text: value.text,
-		type: value.type,
-		time: dayjs().format("HH:mm:ss"),
-	});
-	res.sendStatus(201);
 });
 
 app.get("/messages", async (req, res) => {
-	const limit = req.query.limit;
-	const user = req.headers.user;
-	const messages = await messagesCollection
-		.find({ $or: [{ to: user }, { to: "Todos" }] })
-		.sort({ $natural: 1 })
-		.toArray();
-	messages.reverse();
-	if (limit) {
-		res.send(messages.filter((value, index) => index < limit));
-		return;
+	try {
+		const limit = req.query.limit;
+		const user = req.headers.user;
+		const messages = await messagesCollection
+			.find({ $or: [{ to: user }, { to: "Todos" }] })
+			.sort({ $natural: 1 })
+			.toArray();
+		messages.reverse();
+		if (limit) {
+			res.send(messages.filter((value, index) => index < limit));
+			return;
+		}
+		res.send(messages);
+	} catch (error) {
+		console.log(error);
 	}
-	res.send(messages);
 });
 
 app.post("/status", async (req, res) => {
-	const participant = await participantsCollection.findOne({
-		name: req.headers.user,
-	});
-	if (!participant) {
-		res.sendStatus(404);
-		return;
+	try {
+		const participant = await participantsCollection.findOne({
+			name: req.headers.user,
+		});
+		if (!participant) {
+			res.sendStatus(404);
+			return;
+		}
+		await participantsCollection.updateOne(participant, {
+			$set: { lastStatus: Date.now() },
+		});
+		res.sendStatus(200);
+	} catch (error) {
+		console.log(error);
 	}
-	await participantsCollection.updateOne(participant, {
-		$set: { lastStatus: Date.now() },
-	});
-	res.sendStatus(200);
 });
 
 setInterval(async () => {
-	const timeNow = Date.now();
-	const isInactive = await participantsCollection
-		.find({
-			$expr: {
-				$gt: [{ $subtract: [timeNow, "$lastStatus"] }, 10000],
-			},
-		})
-		.toArray();
-	isInactive.forEach(async (participant) => {
-		await messagesCollection.insertOne({
-			from: participant.name,
-			to: "Todos",
-			text: "sai da sala...",
-			type: "status",
-			time: dayjs(timeNow),
+	try {
+		const timeNow = Date.now();
+		const isInactive = await participantsCollection
+			.find({
+				$expr: {
+					$gt: [{ $subtract: [timeNow, "$lastStatus"] }, 10000],
+				},
+			})
+			.toArray();
+		isInactive.forEach(async (participant) => {
+			await messagesCollection.insertOne({
+				from: participant.name,
+				to: "Todos",
+				text: "sai da sala...",
+				type: "status",
+				time: dayjs(timeNow),
+			});
+			await participantsCollection.deleteOne(participant);
 		});
-		await participantsCollection.deleteOne(participant);
-	});
+	} catch (error) {
+		console.log(error);
+	}
 }, 15000);
 
 app.listen(5000, () => {
