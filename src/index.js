@@ -104,10 +104,22 @@ app.post("/status", async (req, res) => {
 
 setInterval(async () => {
 	const timeNow = Date.now();
-	await participantsCollection.deleteMany({
-		$expr: {
-			$gt: [{ $subtract: [timeNow, "$lastStatus"] }, 10000],
-		},
+	const isInactive = await participantsCollection
+		.find({
+			$expr: {
+				$gt: [{ $subtract: [timeNow, "$lastStatus"] }, 10000],
+			},
+		})
+		.toArray();
+	isInactive.forEach(async (participant) => {
+		await messagesCollection.insertOne({
+			from: participant.name,
+			to: "Todos",
+			text: "sai da sala...",
+			type: "status",
+			time: dayjs(timeNow),
+		});
+		await participantsCollection.deleteOne(participant);
 	});
 }, 15000);
 
