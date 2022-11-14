@@ -3,6 +3,7 @@ import { MongoClient } from "mongodb";
 import cors from "cors";
 import dotenv from "dotenv";
 import dayjs from "dayjs";
+import { stripHtml } from "string-strip-html";
 import { userSchema, messageSchema } from "./validationSchema.js";
 
 const app = express();
@@ -19,7 +20,8 @@ const participantsCollection = db.collection("participants");
 const messagesCollection = db.collection("messages");
 
 app.post("/participants", async (req, res) => {
-	const { error, value } = userSchema.validate(req.body);
+	const sanitizedName = stripHtml(req.body.name.trim()).result;
+	const { error, value } = userSchema.validate({ name: sanitizedName });
 	if (error) {
 		res.status(422).send(error.message);
 		return;
@@ -59,10 +61,15 @@ app.get("/participants", async (req, res) => {
 });
 
 app.post("/messages", async (req, res) => {
+	const sanitizedObjMessage = {
+		to: stripHtml(req.body.to).result.trim(),
+		text: stripHtml(req.body.text).result.trim(),
+		type: stripHtml(req.body.type).result.trim(),
+	};
 	try {
-		const { error, value } = messageSchema.validate(req.body);
+		const { error, value } = messageSchema.validate(sanitizedObjMessage);
 		const participant = await participantsCollection.findOne({
-			name: req.headers.user,
+			name: stripHtml(req.headers.user).result.trim(),
 		});
 		if (error || !participant) {
 			res.status(422).send(error ? error.message : "Usuário não registrado!");
