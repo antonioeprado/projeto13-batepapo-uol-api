@@ -18,30 +18,30 @@ app.use(participantsRouter);
 app.use(messagesRouter);
 app.use(statusRouter);
 
-setInterval(async () => {
-  try {
-    const timeNow = Date.now();
-    const isInactive = await db.participants
-      .find({
-        $expr: {
-          $gt: [{ $subtract: [timeNow, "$lastStatus"] }, 10000],
-        },
-      })
-      .toArray();
-    isInactive.forEach(async (participant) => {
-      await createMessage({
-        from: participant.name,
-        to: "Todos",
-        text: "sai da sala...",
-        type: "STATUS",
-        time: dayjs(timeNow).format("HH:mm:ss"),
-      });
-      await deleteParticipant(participant);
-    });
-  } catch (error) {
-    console.log(error);
-  }
-}, 15000);
+// setInterval(async () => {
+//   try {
+//     const timeNow = Date.now();
+//     const isInactive = await db.participants
+//       .find({
+//         $expr: {
+//           $gt: [{ $subtract: [timeNow, "$lastStatus"] }, 10000],
+//         },
+//       })
+//       .toArray();
+//     isInactive.forEach(async (participant) => {
+//       await createMessage({
+//         from: participant.name,
+//         to: "Todos",
+//         text: "sai da sala...",
+//         type: "STATUS",
+//         time: dayjs(timeNow).format("HH:mm:ss"),
+//       });
+//       await deleteParticipant(participant);
+//     });
+//   } catch (error) {
+//     console.log(error);
+//   }
+// }, 15000);
 
 export function init(): Promise<Express> {
   return Promise.resolve(app);
