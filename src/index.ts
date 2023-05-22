@@ -41,7 +41,7 @@ setInterval(async () => {
   } catch (error) {
     console.log(error);
   }
-}, 15000);
+}, 600000);
 
 export function init(): Promise<Express> {
   return Promise.resolve(app);

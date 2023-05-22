@@ -12,7 +12,7 @@ export function readMessage(id: string) {
 
 export function readMessages(user?: string) {
   return db.messages
-    .find({ $or: [{ to: user }, { to: "Todos" }] })
+    .find({ $or: [{ from: user }, { to: user }, { type: "PUBLIC" }] })
     .sort({ $natural: 1 })
     .toArray();
 }

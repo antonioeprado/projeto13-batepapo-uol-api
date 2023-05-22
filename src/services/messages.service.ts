@@ -11,13 +11,17 @@ import { findParticipant } from "./participants.service";
 
 export async function registerMessage(messageParams: MessageInput) {
   const sender = await findParticipant(messageParams.from);
+  if(!sender) throw new Error("User doesn't exist");
+  if(messageParams.to === "Todos") {
+  	return await createMessage({ ...messageParams, time: dayjs().format("HH:mm:ss") });
+  }
   const receiver = await findParticipant(messageParams.to);
-  if (!sender || !receiver) throw new Error("User doesn't exist");
+  if (!receiver) throw new Error("User doesn't exist");
   await createMessage({ ...messageParams, time: dayjs().format("HH:mm:ss") });
 }
 
 export async function findMessages(limit?: number, user?: string) {
-  const messages = await readMessages(user);
+  const messages = await readMessages(user ? user : "Todos");
   if (limit) {
     return messages.filter((value, index) => index < limit);
   }

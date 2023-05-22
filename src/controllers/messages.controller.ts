@@ -18,8 +18,8 @@ export async function postMessage(req: Request, res: Response) {
 export async function getMessages(req: Request, res: Response) {
   try {
     const { limit } = req.query;
-    const { user } = req.headers;
-    const messages = await findMessages(+limit, user as string);
+    const user = req.get("user");
+    const messages = await findMessages(+limit, user);
     res.status(httpStatus.OK).send(messages);
   } catch (error) {
     if (error instanceof Error) {
